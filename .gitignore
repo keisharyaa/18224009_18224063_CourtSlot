@@ -1,0 +1,27 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Expo / Node
+node_modules/
+.expo/
+dist/
+
+# Local database and generated files
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.sqlite3-wal
+*.sqlite3-shm
+coverage/
+.DS_Store
