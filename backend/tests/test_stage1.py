@@ -13,7 +13,7 @@ def test_schema_and_seed_survive_restart(tmp_path):
     seed(path)
     initialize(path)
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 1
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 2
         assert db.execute("SELECT count(*) FROM facilities").fetchone()[0] == 3
         assert db.execute("SELECT count(*) FROM bookable_units").fetchone()[0] == 3
         assert db.execute("SELECT count(*) FROM bookable_units WHERE booking_model = 'EXCLUSIVE_SLOT' AND slot_minutes = 60 AND timezone = 'Asia/Jakarta'").fetchone()[0] == 3

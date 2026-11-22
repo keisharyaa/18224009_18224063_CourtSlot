@@ -125,6 +125,9 @@ def availability(facility_id: str, start: str | None = None, end: str | None = N
         if row is None:
             raise PartnerError(404, "NOT_FOUND", "Fasilitas tidak ditemukan.")
         units = db.execute("SELECT * FROM bookable_units WHERE facility_id=? ORDER BY id", (facility_id,)).fetchall()
+        booked = {(r["unit_id"], r["start_utc"]) for r in db.execute(
+            "SELECT r.unit_id,r.start_utc FROM reservations r JOIN bookable_units u ON u.id=r.unit_id WHERE u.facility_id=? AND r.status='CONFIRMED'",
+            (facility_id,))}
     slots = []
     for unit in units:
         zone = ZoneInfo(unit["timezone"])
@@ -140,9 +143,11 @@ def availability(facility_id: str, start: str | None = None, end: str | None = N
                 following = point + timedelta(minutes=unit["slot_minutes"])
                 if point.astimezone(timezone.utc) >= first.astimezone(timezone.utc) and following.astimezone(timezone.utc) <= last.astimezone(timezone.utc):
                     closed = row["status"] == "closed"
+                    full = (unit["id"], point.astimezone(timezone.utc).isoformat(timespec="seconds")) in booked
                     slots.append({"unit_id": unit["id"], "start": point.isoformat(timespec="seconds"),
                                   "end": following.isoformat(timespec="seconds"),
-                                  "status": "closed" if closed else "available", "remaining_capacity": 0 if closed else unit["capacity"]})
+                                  "status": "closed" if closed else "full" if full else "available",
+                                  "remaining_capacity": 0 if closed or full else unit["capacity"]})
                 point = following
             date += timedelta(days=1)
     slots.sort(key=lambda s: (s["start"], s["unit_id"]))

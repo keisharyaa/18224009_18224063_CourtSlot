@@ -5,7 +5,7 @@ from pathlib import Path
 from .config import database_path
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 @contextmanager
@@ -59,4 +59,31 @@ def initialize(path: Path | None = None) -> None:
                 );
                 CREATE INDEX idx_units_facility ON bookable_units(facility_id);
                 PRAGMA user_version = 1;
+            """)
+            version = 1
+        if version == 1:
+            db.executescript("""
+                BEGIN IMMEDIATE;
+                CREATE TABLE users (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                    password_hash TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+                CREATE TABLE reservations (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL REFERENCES users(id),
+                    unit_id TEXT NOT NULL REFERENCES bookable_units(id),
+                    start_utc TEXT NOT NULL,
+                    end_utc TEXT NOT NULL,
+                    status TEXT NOT NULL CHECK (status IN ('CONFIRMED','CANCELLED_BY_USER')),
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+                CREATE UNIQUE INDEX one_active_reservation_per_slot
+                    ON reservations(unit_id, start_utc) WHERE status='CONFIRMED';
+                CREATE INDEX reservations_owner ON reservations(user_id, start_utc);
+                PRAGMA user_version = 2;
+                COMMIT;
             """)

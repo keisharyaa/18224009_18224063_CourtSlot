@@ -2,11 +2,14 @@ services:
   api:
     build: ./backend
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${COURTSLOT_BIND_PORT:-8000}:8000"
     environment:
       COURTSLOT_DB_PATH: /data/courtslot.sqlite3
       COURTSLOT_AERIVA_API_KEY: ${COURTSLOT_AERIVA_API_KEY:-}
       COURTSLOT_LOCALLOOP_API_KEY: ${COURTSLOT_LOCALLOOP_API_KEY:-}
+      COURTSLOT_TOKEN_SECRET: ${COURTSLOT_TOKEN_SECRET:-}
+    mem_limit: 256m
+    cpus: 0.75
     volumes:
       - courtslot_data:/data
     restart: unless-stopped

@@ -2,29 +2,36 @@
 
 CourtSlot adalah rancangan platform reservasi fasilitas publik kota. Warga dapat melihat ketersediaan dan mengajukan reservasi; petugas mencatat pemesanan dari kanal lain dalam kalender yang sama; instansi mengatur fasilitas, kebijakan, dan penutupan resmi. Proyek ini dibuat untuk tugas besar II3160 Teknologi Sistem Terintegrasi dan II3140 Pengembangan Aplikasi Web & Mobile oleh Keisha Daffa Aryani dan Yumna Fathonah Kautsar.
 
-> Status: implementasi Tugas 2 tahap 2. Backend dasar dan tiga endpoint partner tersedia secara lokal. Reservasi, login, mobile, dan deployment STB belum dibuat. Kerja sama pemerintah kota tetap skenario perancangan.
+> Status: backend Tugas 2 tahap 3 dan paket Docker lokal tersedia. Mobile dikerjakan Yumna; deployment STB dan HTTPS publik belum diuji. Kerja sama pemerintah kota tetap skenario perancangan.
 
-## Menjalankan backend tahap 1 di Windows
+## Menjalankan backend di Windows
 
 Gunakan Python 3.12 atau lebih baru dari direktori root repository:
 
 ```powershell
-cd D:\CourtSlot
+cd D:\CourtSlot-git
 py -3.12 -m venv backend\.venv
 backend\.venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
-$env:COURTSLOT_DB_PATH = 'D:\CourtSlot\backend\data\courtslot.sqlite3'
-cd D:\CourtSlot\backend
+$env:COURTSLOT_DB_PATH = 'D:\CourtSlot-git\backend\data\courtslot.sqlite3'
+$env:COURTSLOT_AERIVA_API_KEY = '<key-uji-aeriva>'
+$env:COURTSLOT_LOCALLOOP_API_KEY = '<key-uji-localloop-berbeda>'
+$env:COURTSLOT_TOKEN_SECRET = '<nilai-acak-minimal-32-karakter>'
+cd D:\CourtSlot-git\backend
 .\.venv\Scripts\python.exe -m app.seed
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
-Jalankan tes dari `D:\CourtSlot\backend` dengan `.\.venv\Scripts\python.exe -m pytest -q`.
+Jalankan tes dari `D:\CourtSlot-git\backend` dengan `.\.venv\Scripts\python.exe -m pytest -q`.
 
 Buka `http://127.0.0.1:8000/api/health` dan `http://127.0.0.1:8000/docs`. Database berada di path `COURTSLOT_DB_PATH`; bila variabel tidak diisi, default `backend/data/courtslot.sqlite3` saat dijalankan dari folder `backend`. Seed aman dijalankan ulang dan tidak menimpa baris yang sudah ada.
 
 Alternatif Docker lokal dari root: `docker compose up --build -d`, lalu `docker compose exec api python -m app.seed`. Compose memasang volume `courtslot_data` pada `/data`. Docker daemon harus berjalan. Konfigurasi STB belum termasuk tahap ini.
 
-Tiga endpoint partner mengikuti [kontrak AERIVA](docs/AERIVA_Rancangan_API_Integrasi_Tugas2.md) serta dua path di [catalog antarkelompok](docs/api_catalog.json). Catatan perbedaan dan keputusan ada di [contract-decisions](docs/contract-decisions.md). Tetapkan `COURTSLOT_AERIVA_API_KEY` dan `COURTSLOT_LOCALLOOP_API_KEY` dengan nilai berbeda melalui environment atau `.env` lokal sebelum memakai endpoint partner. Keduanya wajib dikirim sebagai `X-API-Key`; jangan masukkan key asli ke repo atau aplikasi mobile.
+Tiga endpoint partner mengikuti [kontrak AERIVA](docs/AERIVA_Rancangan_API_Integrasi_Tugas2.md) serta dua path di [catalog antarkelompok](docs/api_catalog.json). Catatan perbedaan dan keputusan ada di [contract-decisions](docs/contract-decisions.md). Tetapkan `COURTSLOT_AERIVA_API_KEY` dan `COURTSLOT_LOCALLOOP_API_KEY` dengan nilai berbeda melalui environment atau `.env` lokal sebelum memakai endpoint partner. Keduanya wajib dikirim sebagai `X-API-Key`; jangan masukkan key asli ke repo atau aplikasi mobile. Cara partner memperoleh key: hubungi pengelola CourtSlot melalui kanal privat, lalu key dibuat dan disampaikan khusus per mitra.
+
+API internal untuk mobile, contoh request/response, bearer token, error, dan data uji didokumentasikan di [mobile-api-draft.md](docs/mobile-api-draft.md). Backend memakai satu service FastAPI dengan SQLite v2 pada volume Docker; transaksi `BEGIN IMMEDIATE` dan index unik parsial menjaga booking eksklusif. Alur yang bekerja: register → login → katalog/detail → slot → booking → reservasi saya → batal. `CAPACITY_BASED`, kuota, check-in, no-show, reschedule, dan workflow petugas/admin masih rancangan proposal.
+
+Compose lokal membatasi API pada 0,75 CPU dan 256 MB memori, memasang volume persisten, serta mengikat port host loopback yang dapat diubah dengan `COURTSLOT_BIND_PORT`. Persiapan STB dan rollback ada di [deployment-stb.md](docs/deployment-stb.md); bahan PDF pengumpulan yang masih menunggu bukti ada di [README-draft.md](docs/submission/README-draft.md). Port 80, aaPanel, dan tunnel belum disentuh.
 
 Contoh dari PowerShell, setelah key disetel pada environment lokal:
 

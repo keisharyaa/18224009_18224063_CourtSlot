@@ -4,6 +4,7 @@ import sqlite3
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from .public import PartnerError, error_response, router as public_router
+from .internal import router as internal_router
 
 from .db import connection, initialize
 
@@ -16,6 +17,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="CourtSlot Core API", version="0.1.0", lifespan=lifespan)
 app.include_router(public_router)
+app.include_router(internal_router)
 
 
 @app.exception_handler(sqlite3.Error)
