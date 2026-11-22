@@ -1,0 +1,213 @@
+{
+  "catalog_name": "CourtSlot API Catalog",
+  "catalog_version": "1.0.0",
+  "service": "CourtSlot Core API",
+  "project": "Tugas 2 TST × PWAM",
+  "implementation_status": "implemented_and_tested_locally",
+  "public_base_url_target": "https://courtslot.stei.fun",
+  "public_base_url_status": "proposed_not_verified",
+  "local_base_url_example": "http://127.0.0.1:8000",
+  "openapi_path": "/openapi.json",
+  "interactive_docs_path": "/docs",
+  "notes": [
+    "This catalog documents CourtSlot only. The public hostname is a target, not a claim that HTTPS deployment is active.",
+    "The intergroup docs/api_catalog.json lists two CourtSlot paths. The AERIVA Markdown contract also requires facility detail, which CourtSlot implements as the third partner endpoint.",
+    "Examples use fictional Bandung data and placeholder credentials. Never commit or share real API keys or user tokens."
+  ],
+  "shared_rules": {
+    "content_type": "application/json; charset=utf-8",
+    "time_format": "ISO 8601 with UTC Z or numeric offset",
+    "time_interval": "[start,end): start inclusive, end exclusive; compare instants in UTC",
+    "display_timezone_for_demo": "Asia/Jakarta",
+    "coordinates": "WGS84 latitude -90..90, longitude -180..180",
+    "partner_rate_limit": {
+      "requests": 60,
+      "window_seconds": 60,
+      "scope": "per API key per single API process",
+      "exceeded_status": 429,
+      "retry_header": "Retry-After",
+      "retry_header_unit": "seconds"
+    },
+    "partner_error_envelope": {
+      "error": {
+        "code": "INVALID_REQUEST",
+        "message": "Parameter permintaan tidak valid."
+      }
+    },
+    "privacy": "Partner responses contain only public facility data and aggregate slot availability, never user identity or individual reservation details."
+  },
+  "authentication": {
+    "partner": {
+      "header": "X-API-Key",
+      "example_value": "<KEY_KHUSUS_LOCALLOOP>",
+      "key_distribution": "CourtSlot issues a different key for AERIVA and LocalLoop through a private channel. Do not store partner keys in mobile applications or repositories.",
+      "required_for": [
+        "GET /api/public/facilities",
+        "GET /api/public/facilities/{facility_id}",
+        "GET /api/public/facilities/{facility_id}/availability"
+      ]
+    },
+    "citizen": {
+      "header": "Authorization",
+      "format": "Bearer <access_token>",
+      "token_type": "bearer",
+      "expires_in_seconds": 3600,
+      "required_for": [
+        "POST /api/v1/reservations",
+        "GET /api/v1/reservations/me",
+        "POST /api/v1/reservations/{reservation_id}/cancel"
+      ]
+    }
+  },
+  "schemas": {
+    "facility": {
+      "id": "string",
+      "name": "string",
+      "type": "string; demo values park | sports_field | library",
+      "address": "string",
+      "location": "object {lat:number,lon:number} or null",
+      "status": "open | closed",
+      "detail_url": "string or null; currently null",
+      "updated_at": "ISO 8601 datetime with offset"
+    },
+    "availability_slot": {
+      "unit_id": "string",
+      "start": "ISO 8601 datetime with offset",
+      "end": "ISO 8601 datetime with offset",
+      "status": "available | full | closed",
+      "remaining_capacity": "nonnegative integer or null; current exclusive-slot demo uses 1 or 0"
+    }
+  },
+  "partner_endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/public/facilities",
+      "purpose": "List public facilities with filters and cursor pagination",
+      "authentication": "X-API-Key",
+      "query_parameters": [
+        {"name": "lat", "required": false, "type": "number", "rule": "WGS84; must be supplied together with lon"},
+        {"name": "lon", "required": false, "type": "number", "rule": "WGS84; must be supplied together with lat"},
+        {"name": "radius_km", "required": false, "type": "number", "rule": "Positive; only with lat and lon"},
+        {"name": "city", "required": false, "type": "string", "rule": "Exact case-insensitive city match"},
+        {"name": "type", "required": false, "type": "string", "rule": "Exact case-insensitive facility type match"},
+        {"name": "limit", "required": false, "type": "integer", "default": 20, "minimum": 1, "maximum": 100},
+        {"name": "cursor", "required": false, "type": "string", "rule": "Opaque next_cursor from previous response; keep filters unchanged"}
+      ],
+      "behavior": [
+        "Filters combine with AND; results are ordered by facility ID ascending.",
+        "Coordinates without radius select facilities with known coordinates.",
+        "An empty result is {\"items\":[],\"next_cursor\":null}."
+      ],
+      "request_example": "GET /api/public/facilities?city=Bandung&type=sports_field&limit=20",
+      "success_status": 200,
+      "response_example": {
+        "items": [
+          {
+            "id": "fac-bandung-lapangan",
+            "name": "Lapangan Basket Cempaka",
+            "type": "sports_field",
+            "address": "Jl. Cempaka No. 10, Bandung",
+            "location": {"lat": -6.9175, "lon": 107.6191},
+            "status": "open",
+            "detail_url": null,
+            "updated_at": "2026-11-22T11:16:10+07:00"
+          }
+        ],
+        "next_cursor": null
+      },
+      "error_statuses": [400, 401, 429, 503]
+    },
+    {
+      "method": "GET",
+      "path": "/api/public/facilities/{facility_id}",
+      "purpose": "Get one public facility; response is one facility object without an items wrapper",
+      "authentication": "X-API-Key",
+      "path_parameters": [{"name": "facility_id", "required": true, "type": "string"}],
+      "query_parameters": [],
+      "request_example": "GET /api/public/facilities/fac-bandung-lapangan",
+      "success_status": 200,
+      "response_example": {
+        "id": "fac-bandung-lapangan",
+        "name": "Lapangan Basket Cempaka",
+        "type": "sports_field",
+        "address": "Jl. Cempaka No. 10, Bandung",
+        "location": {"lat": -6.9175, "lon": 107.6191},
+        "status": "open",
+        "detail_url": null,
+        "updated_at": "2026-11-22T11:16:10+07:00"
+      },
+      "error_statuses": [401, 404, 429, 503]
+    },
+    {
+      "method": "GET",
+      "path": "/api/public/facilities/{facility_id}/availability",
+      "purpose": "Get aggregate availability for bookable units at a facility",
+      "authentication": "X-API-Key",
+      "path_parameters": [{"name": "facility_id", "required": true, "type": "string"}],
+      "query_parameters": [
+        {"name": "start", "required": true, "type": "ISO 8601 datetime with offset", "rule": "Inclusive"},
+        {"name": "end", "required": true, "type": "ISO 8601 datetime with offset", "rule": "Exclusive; must be later than start"}
+      ],
+      "behavior": [
+        "The maximum requested range is 31 days.",
+        "Only complete 60-minute slots within [start,end) are returned; slots derive from unit opening hours in the unit timezone.",
+        "Exclusive-slot demo: available/1, booked full/0, closed/0. Booking and cancellation update facility updated_at.",
+        "This is a snapshot, not a booking confirmation. No user or reservation identity is returned."
+      ],
+      "request_example": "GET /api/public/facilities/fac-bandung-lapangan/availability?start=2026-12-05T07%3A00%3A00%2B07%3A00&end=2026-12-05T08%3A00%3A00%2B07%3A00",
+      "success_status": 200,
+      "response_example": {
+        "facility_id": "fac-bandung-lapangan",
+        "slots": [
+          {
+            "unit_id": "unit-bandung-lapangan-1",
+            "start": "2026-12-05T07:00:00+07:00",
+            "end": "2026-12-05T08:00:00+07:00",
+            "status": "available",
+            "remaining_capacity": 1
+          }
+        ],
+        "updated_at": "2026-11-22T11:16:10+07:00"
+      },
+      "error_statuses": [400, 401, 404, 429, 503]
+    }
+  ],
+  "partner_errors": [
+    {"http_status": 400, "code": "INVALID_REQUEST", "meaning": "Invalid query parameter, cursor, coordinate or time range"},
+    {"http_status": 401, "code": "INVALID_API_KEY", "meaning": "Missing or invalid X-API-Key", "response_example": {"error": {"code": "INVALID_API_KEY", "message": "API key tidak valid."}}},
+    {"http_status": 403, "code": "FORBIDDEN", "meaning": "Defined in the shared contract for a valid key without access; not currently emitted because both partner keys have access to all three endpoints"},
+    {"http_status": 404, "code": "NOT_FOUND", "meaning": "Facility not found"},
+    {"http_status": 429, "code": "RATE_LIMITED", "meaning": "Rate limit exceeded; use Retry-After header"},
+    {"http_status": 503, "code": "SOURCE_UNAVAILABLE", "meaning": "Partner key configuration or data source unavailable"}
+  ],
+  "internal_mobile_endpoints": [
+    {"method": "POST", "path": "/api/v1/auth/register", "auth": "none", "request_example": {"name": "Warga Demo", "email": "warga@example.test", "password": "password-demo-123"}, "success_status": 201, "response_example": {"id": "usr-<uuid>", "name": "Warga Demo", "email": "warga@example.test"}},
+    {"method": "POST", "path": "/api/v1/auth/login", "auth": "none", "request_example": {"email": "warga@example.test", "password": "password-demo-123"}, "success_status": 200, "response_example": {"access_token": "<token>", "token_type": "bearer", "expires_in": 3600}},
+    {"method": "GET", "path": "/api/v1/facilities", "auth": "none", "success_status": 200, "response_example": {"items": [{"id": "fac-bandung-lapangan", "name": "Lapangan Basket Cempaka", "type": "sports_field", "address": "Jl. Cempaka No. 10, Bandung", "location": {"lat": -6.9175, "lon": 107.6191}, "status": "open", "detail_url": null, "updated_at": "2026-11-22T11:16:10+07:00"}]}},
+    {"method": "GET", "path": "/api/v1/facilities/{facility_id}", "auth": "none", "success_status": 200, "response_example": {"id": "fac-bandung-lapangan", "name": "Lapangan Basket Cempaka", "type": "sports_field", "address": "Jl. Cempaka No. 10, Bandung", "location": {"lat": -6.9175, "lon": 107.6191}, "status": "open", "detail_url": null, "updated_at": "2026-11-22T11:16:10+07:00", "units": [{"id": "unit-bandung-lapangan-1", "name": "Lapangan basket 1", "slot_minutes": 60}]}},
+    {"method": "GET", "path": "/api/v1/units/{unit_id}/slots", "auth": "none", "query_parameters": [{"name": "date", "required": true, "type": "YYYY-MM-DD"}], "success_status": 200, "response_example": {"items": [{"start": "2026-12-05T07:00:00+07:00", "end": "2026-12-05T08:00:00+07:00", "status": "available"}]}},
+    {"method": "POST", "path": "/api/v1/reservations", "auth": "Bearer token", "request_example": {"unit_id": "unit-bandung-lapangan-1", "start": "2026-12-05T07:00:00+07:00"}, "success_status": 201, "response_example": {"id": "res-<uuid>", "unit_id": "unit-bandung-lapangan-1", "start": "2026-12-05T07:00:00+07:00", "end": "2026-12-05T08:00:00+07:00", "status": "CONFIRMED"}, "conflict_example": {"http_status": 409, "error": {"code": "SLOT_UNAVAILABLE", "message": "Slot sudah tidak tersedia."}}},
+    {"method": "GET", "path": "/api/v1/reservations/me", "auth": "Bearer token", "success_status": 200, "response_example": {"items": [{"id": "res-<uuid>", "unit_id": "unit-bandung-lapangan-1", "facility_name": "Lapangan Basket Cempaka", "start": "2026-12-05T07:00:00+07:00", "end": "2026-12-05T08:00:00+07:00", "status": "CONFIRMED"}]}},
+    {"method": "POST", "path": "/api/v1/reservations/{reservation_id}/cancel", "auth": "Bearer token; owner only", "success_status": 200, "response_example": {"id": "res-<uuid>", "status": "CANCELLED_BY_USER"}}
+  ],
+  "system_endpoints": [
+    {"method": "GET", "path": "/api/health", "auth": "none", "response_example": {"status": "ok"}}
+  ],
+  "demo_data": {
+    "city": "Bandung",
+    "timezone": "Asia/Jakarta",
+    "booking_model": "EXCLUSIVE_SLOT",
+    "slot_minutes": 60,
+    "facilities": [
+      {"id": "fac-bandung-lapangan", "type": "sports_field", "unit_id": "unit-bandung-lapangan-1", "opening_hours": "07:00-21:00"},
+      {"id": "fac-bandung-perpustakaan", "type": "library", "unit_id": "unit-bandung-ruang-baca-1", "opening_hours": "08:00-17:00"},
+      {"id": "fac-bandung-taman", "type": "park", "unit_id": "unit-bandung-pavilion-1", "opening_hours": "07:00-18:00"}
+    ]
+  },
+  "known_limits": [
+    "Public STB deployment, HTTPS hostname and registry entry are not verified here.",
+    "Capacity-based booking, quota, check-in, no-show and rescheduling are not implemented.",
+    "Partner rate limiting is in memory within one API process; a multi-worker deployment needs shared state.",
+    "No real partner key or real citizen data is included."
+  ]
+}
