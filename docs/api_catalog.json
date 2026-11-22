@@ -1,0 +1,8 @@
+{
+  "status": "draft_not_verified",
+  "services": [
+    {"name": "AERIVA Core", "base_url": "https://aeriva.stei.site", "base_url_status": "proposed", "endpoints": [{"method":"GET","path":"/api/v1/health"},{"method":"GET","path":"/api/v1/environment/assessment","query":["lat","lon","start","end"]},{"method":"GET","path":"/api/v1/environment/recommendations","query":["lat","lon","start","end"]}]},
+    {"name": "LocalLoop", "base_url": "https://localloop.stei.fun", "base_url_status": "proposed", "endpoints": [{"method":"GET","path":"/api/public/events","path_status":"listed_in_partner_document","purpose":"katalog acara publik"},{"method":"GET","path":"/api/events/{id}","path_status":"listed_in_partner_document_access_unconfirmed","purpose":"detail acara"}]},
+    {"name": "CourtSlot", "base_url": "https://courtslot.stei.fun", "base_url_status": "proposed", "endpoints": [{"method":"GET","path":"/api/public/facilities","path_status":"proposed","purpose":"katalog fasilitas publik"},{"method":"GET","path":"/api/public/facilities/{id}/availability","path_status":"proposed","purpose":"ketersediaan agregat"}]}
+  ]
+}

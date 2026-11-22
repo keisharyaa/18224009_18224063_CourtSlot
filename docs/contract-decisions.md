@@ -8,4 +8,13 @@ Dokumen `AERIVA_Rancangan_API_Integrasi_Tugas2.md` versi 1.0.0 menjadi acuan tig
 - Seed hanya menyisipkan data yang belum ada; tidak mengubah data fasilitas yang sudah disunting setelah seed pertama.
 - Skema database versi 1 memakai `PRAGMA user_version`; migrasi untuk versi berikutnya harus eksplisit dan tidak boleh menghapus database persisten.
 
-Keputusan query, cursor, error, dan status untuk endpoint partner dicatat saat tahap 2, sebelum endpoint dibuka.
+## Tahap 2: API partner
+
+- `docs/api_catalog.json` adalah daftar kesepakatan antarkelompok: CourtSlot mencantumkan daftar fasilitas dan availability. Dokumen MD AERIVA v1.0.0 juga meminta detail fasilitas. Detail ditambahkan sebagai endpoint ketiga tanpa mengubah dua path JSON. Nama placeholder `{id}` pada JSON dan `{facility_id}` pada MD merujuk segmen URL yang sama.
+- `draft_not_verified` dan `proposed` menyatakan status URL/implementasi, bukan izin mengganti path. `https://courtslot.stei.fun` adalah target operasional dan tidak di-hardcode di backend.
+- Semua tiga endpoint mengharuskan `X-API-Key`; dua key berbeda dibaca dari environment. Jika konfigurasi kosong atau sama, API partner mengembalikan 503. Health dan docs tetap terbuka. Rate limit 60 permintaan per menit per key berlaku pada satu proses API; deployment multi-worker memerlukan penyimpan limit bersama.
+- Filter `city` dan `type` adalah kecocokan penuh tanpa membedakan kapital. Koordinat harus dikirim berpasangan; `radius_km` positif hanya boleh bersama keduanya. Tanpa radius, koordinat memilih fasilitas yang memiliki lokasi. Jarak radius dihitung dengan Haversine. Hasil diurutkan menurut ID naik.
+- Cursor adalah base64url dari ID terakhir pada halaman. Filter sebaiknya dipertahankan konsumen pada halaman berikutnya. Cursor invalid menghasilkan 400. `limit` default 20 dan valid 1–100.
+- `detail_url` bernilai null sampai URL aplikasi tersedia. Fasilitas `closed` tetap terlihat pada katalog/detail. `updated_at` berasal dari baris fasilitas yang tersimpan. Availability menggunakan waktu pembaruan fasilitas yang sama; pada tahap 3 perubahan reservasi perlu memperbarui timestamp yang relevan.
+- Availability membangkitkan slot penuh 60 menit dari jam operasional unit dalam timezone unit. Hanya slot yang sepenuhnya masuk `[start,end)` dikirim. Rentang maksimum 31 hari untuk membatasi respons. Perbandingan memakai UTC, respons slot memakai offset lokal unit. Tidak ada batas tanggal masa lalu pada API baca.
+- Tahap 2 belum memiliki reservasi atau penutupan per unit. Karena itu unit eksklusif terbuka menghasilkan `available`/1, fasilitas berstatus `closed` menghasilkan `closed`/0. Enum `full`/0 akan digunakan ketika reservasi tahap 3 ada; tidak dipalsukan pada tahap ini. Bentuk error partner selalu `{"error":{"code":"...","message":"..."}}`; input invalid memakai HTTP 400, termasuk validasi yang biasanya dikembalikan FastAPI sebagai 422.

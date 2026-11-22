@@ -5,6 +5,8 @@ services:
       - "127.0.0.1:8000:8000"
     environment:
       COURTSLOT_DB_PATH: /data/courtslot.sqlite3
+      COURTSLOT_AERIVA_API_KEY: ${COURTSLOT_AERIVA_API_KEY:-}
+      COURTSLOT_LOCALLOOP_API_KEY: ${COURTSLOT_LOCALLOOP_API_KEY:-}
     volumes:
       - courtslot_data:/data
     restart: unless-stopped

@@ -2,7 +2,7 @@
 
 CourtSlot adalah rancangan platform reservasi fasilitas publik kota. Warga dapat melihat ketersediaan dan mengajukan reservasi; petugas mencatat pemesanan dari kanal lain dalam kalender yang sama; instansi mengatur fasilitas, kebijakan, dan penutupan resmi. Proyek ini dibuat untuk tugas besar II3160 Teknologi Sistem Terintegrasi dan II3140 Pengembangan Aplikasi Web & Mobile oleh Keisha Daffa Aryani dan Yumna Fathonah Kautsar.
 
-> Status: implementasi Tugas 2 tahap 1. Backend dasar, skema SQLite, seed fiktif, health endpoint, dan Compose lokal tersedia. Endpoint partner, reservasi, mobile, dan deployment STB belum dibuat. Kerja sama pemerintah kota tetap skenario perancangan.
+> Status: implementasi Tugas 2 tahap 2. Backend dasar dan tiga endpoint partner tersedia secara lokal. Reservasi, login, mobile, dan deployment STB belum dibuat. Kerja sama pemerintah kota tetap skenario perancangan.
 
 ## Menjalankan backend tahap 1 di Windows
 
@@ -24,7 +24,16 @@ Buka `http://127.0.0.1:8000/api/health` dan `http://127.0.0.1:8000/docs`. Databa
 
 Alternatif Docker lokal dari root: `docker compose up --build -d`, lalu `docker compose exec api python -m app.seed`. Compose memasang volume `courtslot_data` pada `/data`. Docker daemon harus berjalan. Konfigurasi STB belum termasuk tahap ini.
 
-Tiga endpoint partner mengikuti [kontrak AERIVA](docs/AERIVA_Rancangan_API_Integrasi_Tugas2.md); catatan keputusan bertahap ada di [contract-decisions](docs/contract-decisions.md). Endpoint tersebut belum tersedia pada tahap 1.
+Tiga endpoint partner mengikuti [kontrak AERIVA](docs/AERIVA_Rancangan_API_Integrasi_Tugas2.md) serta dua path di [catalog antarkelompok](docs/api_catalog.json). Catatan perbedaan dan keputusan ada di [contract-decisions](docs/contract-decisions.md). Tetapkan `COURTSLOT_AERIVA_API_KEY` dan `COURTSLOT_LOCALLOOP_API_KEY` dengan nilai berbeda melalui environment atau `.env` lokal sebelum memakai endpoint partner. Keduanya wajib dikirim sebagai `X-API-Key`; jangan masukkan key asli ke repo atau aplikasi mobile.
+
+Contoh dari PowerShell, setelah key disetel pada environment lokal:
+
+```powershell
+$headers = @{ 'X-API-Key' = $env:COURTSLOT_AERIVA_API_KEY }
+Invoke-RestMethod -Headers $headers 'http://127.0.0.1:8000/api/public/facilities?city=Bandung&limit=1'
+Invoke-RestMethod -Headers $headers 'http://127.0.0.1:8000/api/public/facilities/fac-bandung-lapangan'
+Invoke-RestMethod -Headers $headers 'http://127.0.0.1:8000/api/public/facilities/fac-bandung-lapangan/availability?start=2026-12-05T07%3A00%3A00%2B07%3A00&end=2026-12-05T08%3A00%3A00%2B07%3A00'
+```
 
 ## Tujuan dan batas produk
 

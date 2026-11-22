@@ -26,4 +26,4 @@ def test_health_and_openapi(tmp_path, monkeypatch):
         assert client.get("/docs").status_code == 200
         spec = client.get("/openapi.json").json()
         assert "/api/health" in spec["paths"]
-        assert "/api/public/facilities" not in spec["paths"]
+        assert "/api/public/facilities" in spec["paths"]
